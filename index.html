@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basic Grade Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .input-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 5px;
+        }
+        input {
+            padding: 8px;
+            font-size: 16px;
+            margin-right: 10px;
+            width: 100px;
+        }
+        button {
+            padding: 8px 16px;
+            font-size: 16px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        .add-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+        }
+        .clear-btn {
+            background: #f44336;
+            color: white;
+            border: none;
+        }
+        .stats {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .grades-list {
+            background: white;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        canvas {
+            border: 1px solid #ddd;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Basic Test Grade Tracker</h1>
+    
+    <div class="input-section">
+        <input type="number" id="gradeInput" placeholder="Enter grade (0-100)" min="0" max="100">
+        <button class="add-btn" onclick="addGrade()">Add Grade</button>
+        <button class="clear-btn" onclick="clearAll()">Clear All</button>
+    </div>
+    
+    <div class="stats">
+        <strong>Total Tests: <span id="totalTests">0</span></strong><br>
+        <strong>Average: <span id="average">0</span></strong>
+    </div>
+    
+    <canvas id="gradeChart" width="700" height="300"></canvas>
+    
+    <div class="grades-list">
+        <h3>Your Grades:</h3>
+        <div id="gradesList">No grades entered yet</div>
+    </div>
+
+    <script>
+        let grades = [];
+        
+        // Load saved grades
+        function loadGrades() {
+            const saved = localStorage.getItem('testGrades');
+            if (saved) {
+                grades = JSON.parse(saved);
+                updateDisplay();
+            }
+        }
+        
+        // Save grades
+        function saveGrades() {
+            localStorage.setItem('testGrades', JSON.stringify(grades));
+        }
+        
+        // Add new grade
+        function addGrade() {
+            const input = document.getElementById('gradeInput');
+            const grade = parseFloat(input.value);
+            
+            if (isNaN(grade) || grade < 0 || grade > 100) {
+                alert('Please enter a valid grade between 0 and 100');
+                return;
+            }
+            
+            grades.push(grade);
+            input.value = '';
+            saveGrades();
+            updateDisplay();
+        }
+        
+        // Clear all data
+        function clearAll() {
+            if (confirm('Are you sure you want to clear all grades?')) {
+                grades = [];
+                localStorage.removeItem('testGrades');
+                updateDisplay();
+            }
+        }
+        
+        // Update everything
+        function updateDisplay() {
+            updateStats();
+            updateGradesList();
+            drawChart();
+        }
+        
+        // Update stats
+        function updateStats() {
+            const total = grades.length;
+            const avg = total > 0 ? (grades.reduce((a, b) => a + b, 0) / total).toFixed(1) : 0;
+            
+            document.getElementById('totalTests').textContent = total;
+            document.getElementById('average').textContent = avg;
+        }
+        
+        // Update grades list
+        function updateGradesList() {
+            const list = document.getElementById('gradesList');
+            if (grades.length === 0) {
+                list.innerHTML = 'No grades entered yet';
+                return;
+            }
+            
+            let html = '';
+            grades.forEach((grade, index) => {
+                html += `Test ${index + 1}: ${grade}<br>`;
+            });
+            list.innerHTML = html;
+        }
+        
+        // Draw the chart
+        function drawChart() {
+            const canvas = document.getElementById('gradeChart');
+            const ctx = canvas.getContext('2d');
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (grades.length === 0) {
+                ctx.fillStyle = '#666';
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('No data to display', canvas.width/2, canvas.height/2);
+                return;
+            }
+            
+            // Chart dimensions
+            const padding = 40;
+            const chartWidth = canvas.width - 2 * padding;
+            const chartHeight = canvas.height - 2 * padding;
+            
+            // Draw axes
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(padding, padding);
+            ctx.lineTo(padding, canvas.height - padding);
+            ctx.lineTo(canvas.width - padding, canvas.height - padding);
+            ctx.stroke();
+            
+            // Y-axis labels (0-100)
+            ctx.fillStyle = '#333';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'right';
+            for (let i = 0; i <= 10; i++) {
+                const y = canvas.height - padding - (i * chartHeight / 10);
+                const label = i * 10;
+                ctx.fillText(label, padding - 5, y + 3);
+                
+                // Grid lines
+                ctx.strokeStyle = '#eee';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(padding, y);
+                ctx.lineTo(canvas.width - padding, y);
+                ctx.stroke();
+            }
+            
+            // X-axis labels
+            ctx.textAlign = 'center';
+            const stepX = chartWidth / Math.max(grades.length - 1, 1);
+            grades.forEach((grade, index) => {
+                const x = padding + (index * stepX);
+                ctx.fillText(`Test ${index + 1}`, x, canvas.height - padding + 15);
+            });
+            
+            // Draw the line
+            if (grades.length > 1) {
+                ctx.strokeStyle = '#4CAF50';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                grades.forEach((grade, index) => {
+                    const x = padding + (index * stepX);
+                    const y = canvas.height - padding - (grade * chartHeight / 100);
+                    if (index === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                });
+                ctx.stroke();
+            }
+            
+            // Draw points
+            ctx.fillStyle = '#4CAF50';
+            grades.forEach((grade, index) => {
+                const x = padding + (index * stepX);
+                const y = canvas.height - padding - (grade * chartHeight / 100);
+                ctx.beginPath();
+                ctx.arc(x, y, 4, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+        }
+        
+        // Allow Enter key to add grade
+        document.getElementById('gradeInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addGrade();
+            }
+        });
+        
+        // Load data when page loads
+        loadGrades();
+    </script>
+</body>
+</html>
