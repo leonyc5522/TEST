@@ -39,6 +39,11 @@
             color: white;
             border: none;
         }
+        .export-btn {
+            background: #2196F3;
+            color: white;
+            border: none;
+        }
         .stats {
             background: #e3f2fd;
             padding: 15px;
@@ -65,6 +70,7 @@
         <input type="number" id="gradeInput" placeholder="Enter grade (0-100)" min="0" max="100">
         <button class="add-btn" onclick="addGrade()">Add Grade</button>
         <button class="clear-btn" onclick="clearAll()">Clear All</button>
+        <button class="export-btn" onclick="exportData()">Export Data</button>
     </div>
     
     <div class="stats">
@@ -119,6 +125,35 @@
                 localStorage.removeItem('testGrades');
                 updateDisplay();
             }
+        }
+        
+        // Export data to file
+        function exportData() {
+            if (grades.length === 0) {
+                alert('No data to export');
+                return;
+            }
+            
+            const total = grades.length;
+            const avg = (grades.reduce((a, b) => a + b, 0) / total).toFixed(1);
+            const exportDate = new Date().toLocaleDateString();
+            
+            let csvContent = "Test Number,Grade,Date Exported\n";
+            grades.forEach((grade, index) => {
+                csvContent += `${index + 1},${grade},${exportDate}\n`;
+            });
+            csvContent += `\nSummary:,Total Tests: ${total},Average: ${avg}`;
+            
+            // Create and download file
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `test_grades_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
         }
         
         // Update everything
